@@ -3,7 +3,9 @@ const Exif = require('exif').ExifImage;
 const express = require('express');
 const { default: mongoose } = require('mongoose');
 const multer = require('multer');
-const { nanoid } = require('nanoid');
+const { v4: uuidv4 } = require('uuid');
+require('dotenv').config();
+
 const Post = require('./models/PostModel');
 const User = require('./models/UserModel');
 const app = express();
@@ -21,7 +23,7 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     if (file) {
-      const uniqueSuffix = Date.now() + '-' + nanoid();
+      const uniqueSuffix = Date.now() + '-' + uuid.v4();
 
       cb(null, file.fieldname + '-' + uniqueSuffix);
     } else {
@@ -96,7 +98,11 @@ app.post('/like/:id', async (req, res) => {
   res.status(200).send(updatedPost);
 });
 
-app.listen(3000, () => {
-  mongoose.connect(process.env.MONGO_URI);
-  console.log('listening on port 3000');
+app.listen(process.env.PORT, () => {
+  mongoose.connect(process.env.MONGO_URI).then(
+    () => {console.log("db connected")},
+    err => {console.log("error occured will connecting to db" + err)}
+  );
+  
+  console.log('listening on port ' + process.env.PORT);
 });

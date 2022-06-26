@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 
-const PostModel = new mongoose.Schema(
+const Schema = mongoose.Schema
+
+const PostModel = new Schema(
   {
     hash: { type: String, required: true },
     path: { type: String, required: true },

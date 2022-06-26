@@ -77,8 +77,12 @@ app.post('/post', upload.single('file'), async (req, res) => {
 
 // liking posts
 app.post('/like/:id', async (req, res) => {
-  const post = await Post.findOne({ _id: req.query.id });
-  await Post.updateOne({ _id: req.query.id }, { likes: post.likes + 1 });
+  const post = await Post.findById(req.query.id);
+  const updatedPost = await Post.findByIdAndUpdate(req.query.id, {
+    likes: post.likes + 1,
+  });
+
+  res.status(200).send(updatedPost);
 });
 
 app.listen(3000, () => {

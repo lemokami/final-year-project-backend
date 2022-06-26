@@ -1,4 +1,5 @@
 const cors = require('cors');
+const Exif = require('exif').ExifImage;
 const express = require('express');
 const { default: mongoose } = require('mongoose');
 const multer = require('multer');
@@ -71,9 +72,18 @@ app.get('/posts', async (req, res) => {
 
 //creating posts
 app.post('/post', upload.single('file'), async (req, res) => {
-  // TODO: send to ipfs and get hash
-  // TODO: create a smartcontract from the hash
-  //TODO: create the post
+  try {
+    let metadata;
+    new ExifImage({ image: 'myImage.jpg' }, function (error, exifData) {
+      if (error) console.log('Error: ' + error.message);
+      else metadata = exifData;
+    });
+    // TODO: send to ipfs and get hash
+    // TODO: create a smartcontract from the hash
+    //TODO: create the post
+  } catch (error) {
+    console.log('Error: ' + error.message);
+  }
 });
 
 // liking posts

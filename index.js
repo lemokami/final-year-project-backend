@@ -1,3 +1,6 @@
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+
 const cors = require('cors');
 const Exif = require('exif').ExifImage;
 const express = require('express');
@@ -5,10 +8,17 @@ const { default: mongoose } = require('mongoose');
 const multer = require('multer');
 const uuid = require('uuid');
 const path = require('path');
+const fs = require('fs');
+import { fileURLToPath } from 'url';
+import { create, urlSource } from 'ipfs-http-client';
 require('dotenv').config();
 
-const Post = require('./models/PostModel');
-const User = require('./models/UserModel');
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const Post = require('./models/PostModel.cjs');
+const User = require('./models/UserModel.cjs');
 const app = express();
 
 app.use(express.json());
@@ -16,6 +26,11 @@ app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
 express.static('public');
+
+async function ipfsClient() {
+  const ipfs = await create(new URL('http://127.0.0.1:5001'))
+  return ipfs;
+}
 
 // multer setup
 const storage = multer.diskStorage({
@@ -37,17 +52,17 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // user signin
-app.post('/signin', async (req, res) => {
-  console.log(req.body.key);
+app.get('/signin', async (req, res) => {
   try {
     var user = await User.find({ key: req.body.key });
-
-    if (user) {
+    if (Object.entries(user).length != 0) {
+      console.log("User exists");
       res.status(200).json(user);
     } else {
-      var newUser = User.create({ key: "1" });
-
-      // const newUser = User.create({ key: req.body.key });
+      var newUser = User.create({ 
+        key: req.body.key,
+        name: req.body.name
+      });
       res.status(200).json(newUser);
     }
   } catch (error) {
@@ -78,7 +93,7 @@ app.get('/posts', async (req, res) => {
 });
 
 //creating posts
-app.post('/post', upload.single('file'), (req, res) => {
+app.post('/post', upload.single('file'), async (req, res) => {
   try {
     let metadata;
     var imagePath = __dirname + '/public/uploads/' + req.file.filename;
@@ -89,7 +104,27 @@ app.post('/post', upload.single('file'), (req, res) => {
       }
       else {
         metadata = exifData;
-        // console.log(exifData);
+        const file = fs.readFileSync(imagePath);
+        let imageFileName = req.file.filename;
+        let trimmedFileName = imageFileName.substring(0, imageFileName.length - 4);
+
+        let ipfs = await ipfsClient();
+        let resultImage = await ipfs.add({
+          path: imageFileName,
+          content: file
+        });
+        console.log(resultImage);
+
+        let ipfsHash = resultImage.cid.toString();
+        metadata.ipfshash = ipfsHash
+
+        let resultMetadata = await ipfs.add({
+          path: trimmedFileName + ".json",
+          content: JSON.stringify(metadata)
+        });
+        console.log(resultMetadata);
+
+        
       }
     });
     // TODO: send to ipfs and get hash

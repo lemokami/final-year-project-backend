@@ -93,7 +93,7 @@ app.get('/posts', async (req, res) => {
 });
 
 //creating posts
-app.post('/post', upload.single('file'), async (req, res) => {
+app.post('/post', upload.single('file'), (req, res) => {
   try {
     let metadata;
     var imagePath = __dirname + '/public/uploads/' + req.file.filename;
@@ -103,6 +103,7 @@ app.post('/post', upload.single('file'), async (req, res) => {
         res.sendStatus(400);
       }
       else {
+        //sending ipfs and getting hash
         metadata = exifData;
         const file = fs.readFileSync(imagePath);
         let imageFileName = req.file.filename;
@@ -116,7 +117,8 @@ app.post('/post', upload.single('file'), async (req, res) => {
         console.log(resultImage);
 
         let ipfsHash = resultImage.cid.toString();
-        metadata.ipfshash = ipfsHash
+        metadata.ipfshash = ipfsHash;
+        metadata.walletid = req.body.key;
 
         let resultMetadata = await ipfs.add({
           path: trimmedFileName + ".json",
@@ -124,14 +126,19 @@ app.post('/post', upload.single('file'), async (req, res) => {
         });
         console.log(resultMetadata);
 
-        
+        var result = {
+          "ipfsImageHash": ipfsHash,
+          "ipfsMetaDataHash": resultMetadata.cid.toString() 
+        };
+
+        res.status(200).json(result);
       }
     });
     // TODO: send to ipfs and get hash
     // TODO: create a smartcontract from the hash
     // TODO: create the post
 
-    res.sendStatus(200);
+    // res.sendStatus(200);
   } catch (error) {
     console.log('(catch) Error: ' + error.message);
     res.sendStatus(400);

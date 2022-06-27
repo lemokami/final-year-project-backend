@@ -24,12 +24,10 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     if (file) {
-      // const uniqueSuffix = Date.now() + '-' + uuid.v4() + path.extname(file.originalname);
-      const uniqueSuffix = path.extname(file.originalname);
-
-      // cb(null, file.fieldname + '-' + uniqueSuffix);
-
-    cb(null, "myImage" + uniqueSuffix);
+      const uniqueSuffix = Date.now() + '-' + uuid.v4() + path.extname(file.originalname);
+      // const uniqueSuffix = path.extname(file.originalname);
+      cb(null, file.fieldname + '-' + uniqueSuffix);
+      // cb(null, "myImage" + uniqueSuffix);
     } else {
       cb(new Error('no file given'));
     }
@@ -83,7 +81,7 @@ app.get('/posts', async (req, res) => {
 app.post('/post', upload.single('file'), (req, res) => {
   try {
     let metadata;
-    var imagePath = __dirname + '/public/uploads/myImage.JPG'
+    var imagePath = __dirname + '/public/uploads/' + req.file.filename;
     new Exif({ image: imagePath }, async function (error, exifData) {
       if (error) {
         console.log('(try) Error: ' + error.message);
@@ -91,14 +89,14 @@ app.post('/post', upload.single('file'), (req, res) => {
       }
       else {
         metadata = exifData;
-        console.log(exifData);
-        res.sendStatus(200);
+        // console.log(exifData);
       }
     });
-    
     // TODO: send to ipfs and get hash
     // TODO: create a smartcontract from the hash
     // TODO: create the post
+
+    res.sendStatus(200);
   } catch (error) {
     console.log('(catch) Error: ' + error.message);
     res.sendStatus(400);

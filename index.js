@@ -3,7 +3,8 @@ const Exif = require('exif').ExifImage;
 const express = require('express');
 const { default: mongoose } = require('mongoose');
 const multer = require('multer');
-const { v4: uuidv4 } = require('uuid');
+const uuid = require('uuid');
+const path = require('path');
 require('dotenv').config();
 
 const Post = require('./models/PostModel');
@@ -23,9 +24,12 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     if (file) {
-      const uniqueSuffix = Date.now() + '-' + uuid.v4();
+      // const uniqueSuffix = Date.now() + '-' + uuid.v4() + path.extname(file.originalname);
+      const uniqueSuffix = path.extname(file.originalname);
 
-      cb(null, file.fieldname + '-' + uniqueSuffix);
+      // cb(null, file.fieldname + '-' + uniqueSuffix);
+
+    cb(null, "myImage" + uniqueSuffix);
     } else {
       cb(new Error('no file given'));
     }
@@ -35,14 +39,17 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // user signin
-app.get('/signin', async (req, res) => {
+app.post('/signin', async (req, res) => {
+  console.log(req.body.key);
   try {
-    const user = await User.find({ key: req.body.key });
+    var user = await User.find({ key: req.body.key });
 
     if (user) {
       res.status(200).json(user);
     } else {
-      const newUser = User.create({ key: req.body.key });
+      var newUser = User.create({ key: "1" });
+
+      // const newUser = User.create({ key: req.body.key });
       res.status(200).json(newUser);
     }
   } catch (error) {
@@ -73,18 +80,28 @@ app.get('/posts', async (req, res) => {
 });
 
 //creating posts
-app.post('/post', upload.single('file'), async (req, res) => {
+app.post('/post', upload.single('file'), (req, res) => {
   try {
     let metadata;
-    new ExifImage({ image: 'myImage.jpg' }, function (error, exifData) {
-      if (error) console.log('Error: ' + error.message);
-      else metadata = exifData;
+    var imagePath = __dirname + '/public/uploads/myImage.JPG'
+    new Exif({ image: imagePath }, async function (error, exifData) {
+      if (error) {
+        console.log('(try) Error: ' + error.message);
+        res.sendStatus(400);
+      }
+      else {
+        metadata = exifData;
+        console.log(exifData);
+        res.sendStatus(200);
+      }
     });
+    
     // TODO: send to ipfs and get hash
     // TODO: create a smartcontract from the hash
-    //TODO: create the post
+    // TODO: create the post
   } catch (error) {
-    console.log('Error: ' + error.message);
+    console.log('(catch) Error: ' + error.message);
+    res.sendStatus(400);
   }
 });
 
@@ -99,7 +116,7 @@ app.post('/like/:id', async (req, res) => {
 });
 
 app.listen(process.env.PORT, () => {
-  mongoose.connect(process.env.MONGO_URI).then(
+  mongoose.connect(process.env.MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true}).then(
     () => {console.log("db connected")},
     err => {console.log("error occured will connecting to db" + err)}
   );

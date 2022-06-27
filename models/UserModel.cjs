@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 
 const UserModel = new mongoose.Schema(
@@ -8,6 +7,8 @@ const UserModel = new mongoose.Schema(
     profile_img: { type: String },
     age: { type: Number },
     completed_profile: { type: Boolean, default: false },
+    liked: [{ type: String }],
+    shared: [{ type: String }],
   },
   {
     timestamps: true,

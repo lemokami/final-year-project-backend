@@ -161,9 +161,11 @@ app.post('/create/post', async (req, res) => {
       path: req.body.path,
       shareable: req.body.shareable,
       metaHash: req.body.metaHash,
-      caption:req.body.caption,
+      caption: req.body.caption,
       metaContentHash: req.body.metaContentHash,
       owner: mongoose.Types.ObjectId(req.body.user_id),
+      pid: req.body.pid,
+      tx: req.body.tx,
     });
     res.status(200).send(post);
   } catch (error) {

@@ -8,10 +8,12 @@ const PostModel = new Schema(
     metaHash: { type: String, required: true },
     metaContentHash: { type: String, required: true },
     owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    caption:{type:String, required:true},
+    caption: { type: String, required: true },
     tid: { type: String },
     likedby: [{ type: String }],
     sharers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    pid: { type: String, required: true },
+    tx: { type: String, required: true },
   },
   {
     timestamps: true,

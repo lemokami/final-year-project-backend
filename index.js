@@ -92,7 +92,9 @@ app.patch('/user', upload.single('profile_img'), async (req, res) => {
 
 // getting posts
 app.get('/posts', async (req, res) => {
-  const posts = await Post.find(null, null, { sort: { created_at: -1 } });
+  const posts = await Post.find(null, null, {
+    sort: { created_at: -1 },
+  }).populate('owner');
 
   res.status(200).json(posts);
 });
@@ -150,7 +152,7 @@ app.post('/post', upload.single('file'), async (req, res) => {
             shareable: req.body.shareable,
             metaHash: hashes.metaHash,
             metaContentHash: hashes.metaContentHash,
-            owner: req.body.key,
+            owner: mongoose.Types.ObjectId(req.body.user_id),
           });
 
           res.status(200).send(post);

@@ -92,11 +92,23 @@ app.patch('/user', upload.single('profile_img'), async (req, res) => {
 
 // getting posts
 app.get('/posts', async (req, res) => {
-  const posts = await Post.find(null, null, {
-    sort: { created_at: -1 },
-  }).populate('owner');
+  const posts = await Post.find().populate('owner');
 
   res.status(200).json(posts);
+});
+
+//getting specific post
+app.get('/post/:pid', async (req, res) => {
+  const post = await Post.find({ pid: req.params.pid }).populate([
+    'owner',
+    'sharers',
+  ]);
+
+  if (!post.length) {
+    res.status(400).send({ message: 'No Post with that post id' });
+  } else {
+    res.status(200).send(post);
+  }
 });
 
 // creating hash of a file and metadata
@@ -170,6 +182,24 @@ app.post('/create/post', async (req, res) => {
     res.status(200).send(post);
   } catch (error) {
     res.status(400).send(error);
+  }
+});
+
+app.post('/share/post', async (req, res) => {
+  try {
+    const post = await Post.findOne({ pid: req.body.pid });
+
+    if (post) {
+      post.sharers.push(mongoose.Types.ObjectId(req.body.sharer_id));
+      await post.save();
+      res.status(200).send(post);
+    } else {
+      // no post of that post id
+      res.status(400).send({ message: 'No post found' });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(400).send(error.message);
   }
 });
 

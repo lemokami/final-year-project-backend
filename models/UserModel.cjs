@@ -8,7 +8,8 @@ const UserModel = new mongoose.Schema(
     age: { type: Number },
     completed_profile: { type: Boolean, default: false },
     liked: [{ type: String }],
-    shared: [{ type: String }],
+    own: [{ type: String }],
+    shared: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Post' }],
   },
   {
     timestamps: true,

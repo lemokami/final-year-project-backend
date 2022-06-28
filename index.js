@@ -10,7 +10,7 @@ const uuid = require('uuid');
 const path = require('path');
 const fs = require('fs');
 import { fileURLToPath } from 'url';
-import { create, urlSource } from 'ipfs-http-client';
+import { create } from 'ipfs-http-client';
 require('dotenv').config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,7 +27,7 @@ app.use(cors());
 app.use('/public', express.static('public'));
 
 async function ipfsClient() {
-  const ipfs = await create(new URL('http://127.0.0.1:5001'));
+  const ipfs = await create(new URL(process.env.IPFS_URL));
   return ipfs;
 }
 

@@ -99,15 +99,14 @@ app.get('/posts', async (req, res) => {
   res.status(200).json(posts);
 });
 
-//creating posts
-app.post('/post', upload.single('file'), async (req, res) => {
+// creating hash of a file and metadata
+app.post('/create/hash', upload.single('file'), async (req, res) => {
   try {
     let metadata;
     let hashes;
     var imagePath = __dirname + '/public/uploads/' + req.file.filename;
     new Exif({ image: imagePath }, async function (error, exifData) {
       if (error) {
-        console.log('(try) Error: ' + error.message);
         res.status(400).send({ message: 'Exif parsing issue' });
       } else {
         metadata = exifData;
@@ -142,20 +141,11 @@ app.post('/post', upload.single('file'), async (req, res) => {
         };
         // checking if post exists
         const existingPost = await Post.findOne(hashes);
-        console.log(existingPost);
         if (existingPost) {
           res.status(409).json({ message: 'Content already exists' });
         } else {
-          //creating file
-          const post = await Post.create({
-            path: req.file.path,
-            shareable: req.body.shareable,
-            metaHash: hashes.metaHash,
-            metaContentHash: hashes.metaContentHash,
-            owner: mongoose.Types.ObjectId(req.body.user_id),
-          });
-
-          res.status(200).send(post);
+          // if post does not exist sent metadata and content hashes with path of file
+          res.status(200).send({ ...hashes, path: req.file.path });
         }
       }
     });
@@ -163,6 +153,87 @@ app.post('/post', upload.single('file'), async (req, res) => {
     res.status(400).send(error.message);
   }
 });
+
+//creating a post
+app.post('/create/post', async (req, res) => {
+  try {
+    const post = await Post.create({
+      path: req.body.path,
+      shareable: req.body.shareable,
+      metaHash: req.body.metaHash,
+      metaContentHash: req.body.metaContentHash,
+      owner: mongoose.Types.ObjectId(req.body.user_id),
+    });
+    res.status(200).send(post);
+  } catch (error) {
+    res.status(400).send(error);
+  }
+});
+
+// //creating posts
+// app.post('/post', upload.single('file'), async (req, res) => {
+//   try {
+//     let metadata;
+//     let hashes;
+//     var imagePath = __dirname + '/public/uploads/' + req.file.filename;
+//     new Exif({ image: imagePath }, async function (error, exifData) {
+//       if (error) {
+//         console.log('(try) Error: ' + error.message);
+//         res.status(400).send({ message: 'Exif parsing issue' });
+//       } else {
+//         metadata = exifData;
+//         //sending ipfs and getting hash
+//         const file = fs.readFileSync(imagePath);
+//         let imageFileName = req.file.filename;
+//         let trimmedFileName = imageFileName.substring(
+//           0,
+//           imageFileName.length - 4
+//         );
+
+//         let ipfs = await ipfsClient();
+//         let resultImage = await ipfs.add({
+//           path: imageFileName,
+//           content: file,
+//         });
+//         console.log(resultImage);
+
+//         let ipfsHash = resultImage.cid.toString();
+//         metadata.ipfshash = ipfsHash;
+//         metadata.walletid = req.body.key;
+
+//         let resultMetadata = await ipfs.add({
+//           path: trimmedFileName + '.json',
+//           content: JSON.stringify(metadata),
+//         });
+//         console.log(resultMetadata);
+
+//         hashes = {
+//           metaContentHash: ipfsHash,
+//           metaHash: resultMetadata.cid.toString(),
+//         };
+//         // checking if post exists
+//         const existingPost = await Post.findOne(hashes);
+//         console.log(existingPost);
+//         if (existingPost) {
+//           res.status(409).json({ message: 'Content already exists' });
+//         } else {
+//           //creating file
+//           const post = await Post.create({
+//             path: req.file.path,
+//             shareable: req.body.shareable,
+//             metaHash: hashes.metaHash,
+//             metaContentHash: hashes.metaContentHash,
+//             owner: mongoose.Types.ObjectId(req.body.user_id),
+//           });
+
+//           res.status(200).send(post);
+//         }
+//       }
+//     });
+//   } catch (error) {
+//     res.status(400).send(error.message);
+//   }
+// });
 
 // liking posts
 app.post('/like/:id', async (req, res) => {

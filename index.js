@@ -11,6 +11,7 @@ const path = require('path');
 const fs = require('fs');
 import { fileURLToPath } from 'url';
 import { create } from 'ipfs-http-client';
+import Feed from './models/FeedModel.cjs';
 require('dotenv').config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -92,7 +93,7 @@ app.patch('/user', upload.single('profile_img'), async (req, res) => {
 
 // getting posts
 app.get('/posts', async (req, res) => {
-  const posts = await Post.find().populate('owner');
+  const posts = await Feed.find().populate(['post', 'poster', 'owner']);
 
   res.status(200).json(posts);
 });
@@ -179,6 +180,14 @@ app.post('/create/post', async (req, res) => {
       pid: req.body.pid,
       tx: req.body.tx,
     });
+
+    await Feed.create({
+      post: mongoose.Types.ObjectId(post.id),
+      isOwner: true,
+      poster: mongoose.Types.ObjectId(req.body.user_id),
+      owner: mongoose.Types.ObjectId(req.body.user_id),
+    });
+
     res.status(200).send(post);
   } catch (error) {
     res.status(400).send(error);
@@ -187,16 +196,23 @@ app.post('/create/post', async (req, res) => {
 
 app.post('/share/post', async (req, res) => {
   try {
-    const post = await Post.findOne({ pid: req.body.pid });
+    const post = await Post.findOneAndUpdate(
+      { pid: req.body.pid },
+      { $push: { sharers: mongoose.Types.ObjectId(req.body.sharer_id) } }
+    );
 
-    if (post) {
-      post.sharers.push(mongoose.Types.ObjectId(req.body.sharer_id));
-      await post.save();
-      res.status(200).send(post);
-    } else {
-      // no post of that post id
-      res.status(400).send({ message: 'No post found' });
-    }
+    await Feed.create({
+      post: mongoose.Types.ObjectId(post.id),
+      isOwner: false,
+      poster: mongoose.Types.ObjectId(req.body.sharer_id),
+      owner: mongoose.Types.ObjectId(req.body.owner_id),
+    });
+
+    await User.findByIdAndUpdate(req.body.sharer_id, {
+      $push: { shared: post.id },
+    });
+
+    res.status(200).send(post);
   } catch (error) {
     console.log(error);
     res.status(400).send(error.message);
@@ -269,13 +285,41 @@ app.post('/share/post', async (req, res) => {
 // });
 
 // liking posts
-app.post('/like/:id', async (req, res) => {
-  const post = await Post.findById(req.query.id);
-  const updatedPost = await Post.findByIdAndUpdate(req.query.id, {
-    likes: post.likes + 1,
-  });
+app.post('/like/post', async (req, res) => {
+  try {
+    const feedPost = await Feed.findByIdAndUpdate(req.body.id, {
+      $inc: { likes: +1 },
+    });
 
-  res.status(200).send(updatedPost);
+    if (!feedPost) throw 'Error liking post';
+    await User.findByIdAndUpdate(req.body.liker_id, {
+      $push: { liked: req.body.id },
+    });
+
+    const user = await User.findById(req.body.liker_id);
+    res.status(200).send({ user });
+  } catch (error) {
+    res.status(400).send(error.message);
+  }
+});
+
+// liking posts
+app.post('/unlike/post', async (req, res) => {
+  try {
+    const feedPost = await Feed.findByIdAndUpdate(req.body.id, {
+      $inc: { likes: -1 },
+    });
+
+    if (!feedPost) throw 'Error Unliking post';
+
+    await User.findByIdAndUpdate(req.body.unliker_id, {
+      $pull: { liked: req.body.id },
+    });
+    const user = await User.findById(req.body.unliker_id);
+    res.status(200).send({ user });
+  } catch (error) {
+    res.status(400).send(error.message);
+  }
 });
 
 app.listen(process.env.PORT, () => {
